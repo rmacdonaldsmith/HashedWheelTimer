@@ -5,7 +5,9 @@ namespace HashedWheelTimer.Core
 {
     public class TimeBucket
     {
-        private readonly List<TimeoutElement> _timeouts;
+        //consider a dictionary here <guid, timeout> so that we get
+        //constant time lookups when we want to cancel a timeout.
+        private readonly HashSet<TimeoutElement> _timeouts;
 
         public TimeBucket() : this(10)
         {
@@ -13,9 +15,17 @@ namespace HashedWheelTimer.Core
 
         public TimeBucket(int initialLength)
         {
-            _timeouts = new List<TimeoutElement>(initialLength);
+            _timeouts = new HashSet<TimeoutElement>();
         }
 
+        public void Add(TimeoutElement timeout)
+        {
+            _timeouts.Add(timeout);
+        }
+
+        /// <summary>
+        /// Calls the ExpireTimer delegate for all timeouts in this bucket
+        /// </summary>
         public void ExpireTimers()
         {
             if (!_timeouts.Any()) 
@@ -25,6 +35,8 @@ namespace HashedWheelTimer.Core
             {
                 timeoutElement.ExpireTimeout();
             }
+
+            _timeouts.Clear();
         }
     }
 }

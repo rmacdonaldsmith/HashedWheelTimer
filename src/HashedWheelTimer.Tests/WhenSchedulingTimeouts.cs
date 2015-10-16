@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using NUnit.Framework;
 
 namespace HashedWheelTimers.Tests
@@ -12,14 +13,25 @@ namespace HashedWheelTimers.Tests
             var now = DateTime.Now;
             var expired = false;
 
-            var wheelTimer = new HashedWheelTimer();
-            var handle = wheelTimer.SetTimeout(now, () =>
+            var wheelTimer = new HashedWheelTimer(16, 100);
+            var handle = wheelTimer.SetTimeout(200, () =>
             {
                 expired = true;
+                Console.WriteLine("Timeout expired");
             });
 
+            wheelTimer.SetTimeout(1500, () =>
+            {
+                expired = true;
+                Console.WriteLine("Timeout expired");
+            });
+
+            wheelTimer.Start();
+
+            Thread.Sleep(1600);
+
             Assert.IsNotNull(handle);
-            Assert.AreNotEqual(Guid.Empty, handle);
+            Assert.AreEqual(Guid.Empty, handle);
         }
     }
 }
