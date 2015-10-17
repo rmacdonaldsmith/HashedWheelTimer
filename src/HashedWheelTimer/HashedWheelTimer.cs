@@ -11,7 +11,7 @@ namespace HashedWheelTimers
         private readonly int _tickDurationMs;
         private readonly TimeBucket[] _timerWheel;
         private Timer _timer;
-        private short _running = 0;
+        private int _running = 0;
         private int _currentWheelIndex = 0;
         private readonly object _wheelLock = new object();
         private readonly Func<int, int, int> CalculateIndexModulo = (i, N) => i%N;
@@ -57,8 +57,10 @@ namespace HashedWheelTimers
             var index = CalculateIndexBitwiseAnd(timerAdjustedDelay, _ticksPerWheel);
             var timeout = new TimeoutElement(delayMs, expirationAction);
 
-            _timerWheel[index].Add(timeout);
-
+            lock (_wheelLock)
+            {
+                _timerWheel[index].Add(timeout);
+            }
 
             return Guid.Empty;
         }
@@ -70,11 +72,16 @@ namespace HashedWheelTimers
 
         public void Start()
         {
+            Interlocked.CompareExchange(ref _running, 1, 0);
+
             _timer = new Timer(AdvanceWheel, null, 0, _tickDurationMs);
         }
 
         private void AdvanceWheel(object state)
         {
+            if (!Running)
+                return;
+
             if (_currentWheelIndex++ > _ticksPerWheel -1)
                 _currentWheelIndex = 0;
 
@@ -90,7 +97,12 @@ namespace HashedWheelTimers
 
         public void Stop()
         {
+            Interlocked.Decrement(ref _running);
             _timer.Change(Timeout.Infinite, Timeout.Infinite);
+        }
+
+        protected bool Running {
+            get { return _running == 1; }
         }
 
         private int RoundUpWheelSizeToPowerOf2(int initialSize)
