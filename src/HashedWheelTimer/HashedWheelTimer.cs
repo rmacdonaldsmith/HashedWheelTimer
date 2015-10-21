@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Threading;
-using HashedWheelTimer.Core;
 
 namespace HashedWheelTimers
 {
@@ -9,8 +8,8 @@ namespace HashedWheelTimers
     {
         private readonly int _ticksPerWheel;
         private readonly int _tickDurationMs;
-        private readonly TimeBucket[] _timerWheel;
-        private Timer _timer;
+        private readonly HashedWheelTimerTimeBucket[] _timerWheel;
+        private ITimer _timer;
         private int _running = 0;
         private int _currentWheelIndex = 0;
         private readonly object _wheelLock = new object();
@@ -29,23 +28,30 @@ namespace HashedWheelTimers
             _timerWheel = InitWheel(ticksPerWheel);
         }
 
-        private TimeBucket[] InitWheel(int ticksPerWheel)
+        private HashedWheelTimerTimeBucket[] InitWheel(int ticksPerWheel)
         {
             //we need to make sure that the tickePerWheel is a power of 2
             //if not maybe we can shift the tickerPerWheel to the nearest power of 2?
 
-            var wheel = new TimeBucket[ticksPerWheel];
+            var wheel = new HashedWheelTimerTimeBucket[ticksPerWheel];
 
             for (int i = 0; i < ticksPerWheel; i++)
             {
-                wheel[i] = new TimeBucket();
+                wheel[i] = new HashedWheelTimerTimeBucket();
             }
 
             return wheel;
         }
 
-        public Guid SetTimeout(int delayMs, Action expirationAction)
+        public ICancellable SetTimeout(int delayMs, Action expirationAction)
         {
+            //do not accept a timeout less than the wheel resolution
+            if(delayMs <= _tickDurationMs)
+                throw new ArgumentOutOfRangeException("delayMs", delayMs,
+                                                      string.Format(
+                                                          "Requested deadline {0}ms is less than the resolution of the wheel {1}ms",
+                                                          delayMs, _tickDurationMs));
+
             //do not accept a timeout greater than the time represented by the wheel.
             if (delayMs > _ticksPerWheel*_tickDurationMs)
                 throw new ArgumentOutOfRangeException("delayMs", delayMs,
@@ -55,26 +61,21 @@ namespace HashedWheelTimers
 
             var timerAdjustedDelay = delayMs/_tickDurationMs;
             var index = CalculateIndexBitwiseAnd(timerAdjustedDelay, _ticksPerWheel);
-            var timeout = new TimeoutElement(delayMs, expirationAction);
+            var timeout = new Timeout(delayMs, expirationAction);
 
             lock (_wheelLock)
             {
                 _timerWheel[index].Add(timeout);
             }
 
-            return Guid.Empty;
-        }
-
-        public void CancelTimeout(Guid handle)
-        {
-
+            return timeout;
         }
 
         public void Start()
         {
             Interlocked.CompareExchange(ref _running, 1, 0);
-
-            _timer = new Timer(AdvanceWheel, null, 0, _tickDurationMs);
+             
+            _timer = new ThreadingBasedTimer(_tickDurationMs, _tickDurationMs, AdvanceWheel);
         }
 
         private void AdvanceWheel(object state)
@@ -87,6 +88,7 @@ namespace HashedWheelTimers
 
             Debug.WriteLine("Advancing wheel position to {0}", _currentWheelIndex);
 
+            //we probably dont need this lock if we can assert that inserts dont happen in to the current bucket
             lock (_wheelLock)
             {
                 //i think this is naieve; we probably want to move the expired timeout actions to a queue and have a seperate thread handle them
@@ -98,7 +100,7 @@ namespace HashedWheelTimers
         public void Stop()
         {
             Interlocked.Decrement(ref _running);
-            _timer.Change(Timeout.Infinite, Timeout.Infinite);
+            _timer.Stop();
         }
 
         protected bool Running {

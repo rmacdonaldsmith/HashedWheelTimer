@@ -43,6 +43,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="IsPowerOfTwoTests.cs" />
+    <Compile Include="WhenCancellingTimers.cs" />
     <Compile Include="WhenSchedulingTimeouts.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

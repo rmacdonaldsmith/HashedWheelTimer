@@ -1,24 +1,24 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 
-namespace HashedWheelTimer.Core
+namespace HashedWheelTimers
 {
-    public class TimeBucket
+    public class HashedWheelTimerTimeBucket
     {
         //consider a dictionary here <guid, timeout> so that we get
         //constant time lookups when we want to cancel a timeout.
-        private readonly HashSet<TimeoutElement> _timeouts;
+        private readonly HashSet<Timeout> _timeouts;
 
-        public TimeBucket() : this(10)
+        public HashedWheelTimerTimeBucket() : this(10)
         {
         }
 
-        public TimeBucket(int initialLength)
+        public HashedWheelTimerTimeBucket(int initialLength)
         {
-            _timeouts = new HashSet<TimeoutElement>();
+            _timeouts = new HashSet<Timeout>();
         }
 
-        public void Add(TimeoutElement timeout)
+        public void Add(Timeout timeout)
         {
             _timeouts.Add(timeout);
         }
