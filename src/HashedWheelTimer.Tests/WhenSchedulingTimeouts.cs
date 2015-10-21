@@ -48,9 +48,9 @@ namespace HashedWheelTimers.Tests
             });
 
             Thread.Sleep(1600);
+            wheelTimer.Stop();
 
             Assert.IsNotNull(handle);
-            Assert.AreEqual(Guid.Empty, handle);
             Assert.AreEqual(2, expired.Count);
             expired.Aggregate(0, (i, l) =>
             {
@@ -85,7 +85,7 @@ namespace HashedWheelTimers.Tests
             });
 
             var expiredAt = expired.First();
-            Assert.AreEqual(4, expired.Count(t => t.Equals(expiredAt)));
+            Assert.AreEqual(4, expired.Count(t => Math.Abs(t - expiredAt) < 3));
         }
 
         public abstract class WheelTimerSpec

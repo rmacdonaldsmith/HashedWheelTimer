@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Threading;
+using HashedWheelTimers.Timers;
 
 namespace HashedWheelTimers
 {
@@ -8,7 +9,7 @@ namespace HashedWheelTimers
     {
         private readonly int _ticksPerWheel;
         private readonly int _tickDurationMs;
-        private readonly HashedWheelTimerTimeBucket[] _timerWheel;
+        private readonly HashedWheelTimerBucket[] _timerWheel;
         private ITimer _timer;
         private int _running = 0;
         private int _currentWheelIndex = 0;
@@ -26,18 +27,19 @@ namespace HashedWheelTimers
             _ticksPerWheel = ticksPerWheel;
             _tickDurationMs = tickDurationMs;
             _timerWheel = InitWheel(ticksPerWheel);
+            _timer = new ThreadingBasedTimer(0, _tickDurationMs, AdvanceWheel);
         }
 
-        private HashedWheelTimerTimeBucket[] InitWheel(int ticksPerWheel)
+        private HashedWheelTimerBucket[] InitWheel(int ticksPerWheel)
         {
             //we need to make sure that the tickePerWheel is a power of 2
             //if not maybe we can shift the tickerPerWheel to the nearest power of 2?
 
-            var wheel = new HashedWheelTimerTimeBucket[ticksPerWheel];
+            var wheel = new HashedWheelTimerBucket[ticksPerWheel];
 
             for (int i = 0; i < ticksPerWheel; i++)
             {
-                wheel[i] = new HashedWheelTimerTimeBucket();
+                wheel[i] = new HashedWheelTimerBucket();
             }
 
             return wheel;
@@ -73,9 +75,11 @@ namespace HashedWheelTimers
 
         public void Start()
         {
+            if (Running) return;
+
             Interlocked.CompareExchange(ref _running, 1, 0);
              
-            _timer = new ThreadingBasedTimer(_tickDurationMs, _tickDurationMs, AdvanceWheel);
+            _timer.Start();
         }
 
         private void AdvanceWheel(object state)
@@ -99,8 +103,12 @@ namespace HashedWheelTimers
 
         public void Stop()
         {
-            Interlocked.Decrement(ref _running);
-            _timer.Stop();
+            if (Running)
+            {
+                Interlocked.Decrement(ref _running);
+                
+                _timer.Stop();
+            }
         }
 
         protected bool Running {

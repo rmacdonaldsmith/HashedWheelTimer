@@ -3,17 +3,17 @@ using System.Linq;
 
 namespace HashedWheelTimers
 {
-    public class HashedWheelTimerTimeBucket
+    public class HashedWheelTimerBucket
     {
         //consider a dictionary here <guid, timeout> so that we get
         //constant time lookups when we want to cancel a timeout.
         private readonly HashSet<Timeout> _timeouts;
 
-        public HashedWheelTimerTimeBucket() : this(10)
+        public HashedWheelTimerBucket() : this(10)
         {
         }
 
-        public HashedWheelTimerTimeBucket(int initialLength)
+        public HashedWheelTimerBucket(int initialLength)
         {
             _timeouts = new HashSet<Timeout>();
         }

@@ -1,17 +1,14 @@
-﻿using System;
+using System;
 using System.Runtime.InteropServices;
 using System.Threading;
 
-namespace HashedWheelTimers
+namespace HashedWheelTimers.Timers
 {
-    public interface ITimer : IDisposable
-    {
-        void Start();
-
-        void Stop();
-    }
-
-    public class ThreadingBasedTimer : ITimer, IDisposable
+    /// <summary>
+    /// The best resolution of this timer will be in the 10 - 15 ms range. Not great but probably ok for most
+    /// scenarios.
+    /// </summary>
+    public class ThreadingBasedTimer : ITimer
     {
         private readonly int _startsInMs;
         private readonly int _periodMs;
@@ -26,7 +23,7 @@ namespace HashedWheelTimers
             _periodMs = periodMs;
             _timerCallback = state => callback(state);
             _timer = new Timer(_timerCallback, null, System.Threading.Timeout.Infinite,
-                System.Threading.Timeout.Infinite);
+                               System.Threading.Timeout.Infinite);
             _gcHandle = GCHandle.Alloc(_timerCallback);
         }
 

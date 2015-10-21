@@ -3,11 +3,6 @@ using System.Threading.Tasks;
 
 namespace HashedWheelTimers
 {
-    public interface ICancellable
-    {
-        void Cancel();
-    }
-
     public class Timeout : ICancellable
     {
         private readonly long _deadline;
@@ -31,9 +26,10 @@ namespace HashedWheelTimers
             get { return _state; }
         }
 
-        public Task ExpireTimeout()
+        public void ExpireTimeout()
         {
-            return Task.Run(_expirationAction);
+            if(_state == Status.Waiting)
+                Task.Run(_expirationAction);
         }
 
         public enum Status
